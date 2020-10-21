@@ -13,7 +13,7 @@ library(lubridate)
 
 
 ```{r}
-ripa <- read_csv("RIPAStopData_2018.csv")
+ripa <- read_csv("C:/Users/shuoc/Documents/Berkeley/2020_Fall/data_science/mid_term/RIPA Stop Data 2018.csv")
 ```
 
 
@@ -73,10 +73,18 @@ ripa %>% count(RAE5)
 ```
 
 
+### Number of Stops by Agency
+```{r}
+ripa %>% 
+  group_by(AGENCY_ORI_2) %>% 
+  summarize(n_srch = n())
+```
+
+
 ## Total Searches by age group
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1 |ADS_SEARCH_PROPERTY) %>% 
+  filter(ADS_SEARCH_PERSON |ADS_SEARCH_PROPERTY) %>% 
   group_by(AGENCY_ORI_2, AGE_GROUP) %>% 
   summarize(n_srch = n()) %>% 
   print(n = 72)
@@ -121,6 +129,39 @@ ripa %>%
             n_search = sum(ADS_SEARCH_PERSON == 1| ADS_SEARCH_PROPERTY ==1, na.rm = TRUE)) 
 ```
 
+# search rates by race excluding CHP
+```{r}
+ripa %>% 
+  filter(AGENCY_ORI_2 != 4) %>% 
+  group_by( RAE_FULL) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)/n(), 
+            n_search = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)) 
+```
+
+
+## Overall Search Rates by Reason for Stop and Race
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, AGENCY_ORI_2 != 4) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)/n(), 
+            n_search = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)) 
+```
+
+
+## Overall Hit Rates by Reason for Stop and Race
+```{r}
+ripa %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, AGENCY_ORI_2 != 4,
+         REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n(), 
+            n_hit = sum(CED_NONE_CONTRABAND==0))
+
+
+```
+
+
 
 ## SEARCH RATES by race and agency
 ```{r}
@@ -137,7 +178,7 @@ ripa %>%
   filter(AGE_GROUP == 4) %>% 
   group_by(RAE_FULL) %>% 
   summarize(search_rate = sum(ADS_SEARCH_PERSON == 1| ADS_SEARCH_PROPERTY ==1, na.rm = TRUE)/n(),
-            n_search = sum(ADS_SEARCH_PERSON == 1, na.rm = TRUE))
+            n_search = sum(ADS_SEARCH_PERSON == 1| ADS_SEARCH_PROPERTY ==1, na.rm = TRUE))
 ```
 
 
@@ -179,7 +220,7 @@ ripa %>%
   filter(AGE_GROUP == 4) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
   summarize(search_rate = sum(ADS_SEARCH_PERSON == 1| ADS_SEARCH_PROPERTY ==1, na.rm = TRUE)/n(),
-            n_search = sum(ADS_SEARCH_PERSON == 1, na.rm = TRUE)) %>% 
+            n_search = sum(ADS_SEARCH_PERSON == 1| ADS_SEARCH_PROPERTY ==1, na.rm = TRUE)) %>% 
   print(n = 64)
 ```
 
@@ -220,10 +261,9 @@ ripa %>%
 # OVERALL HIT RATES BY RACE 
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1 | ADS_SEARCH_PROPERTY) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY) %>% 
   group_by(RAE_FULL) %>% 
-  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
-  print(n = 64)
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n())
 
 ```
 
@@ -231,7 +271,7 @@ ripa %>%
 ### HIT RATES BY AGENCY & RACE 
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1 | ADS_SEARCH_PROPERTY) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY) %>% 
   group_by(AGENCY_ORI_2, RAE_FULL) %>% 
   summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
@@ -243,7 +283,7 @@ ripa %>%
 
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1 | ADS_SEARCH_PROPERTY) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY) %>% 
   group_by(AGE_GROUP, RAE_FULL) %>% 
   summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
@@ -253,7 +293,7 @@ ripa %>%
 ## hit rates, by race and agency, 18 - 24
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1 | ADS_SEARCH_PROPERTY ==1, AGE_GROUP == 4) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, AGE_GROUP == 4) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
   summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
@@ -263,7 +303,7 @@ ripa %>%
 ## hit rates, by race and agency, 25 - 34
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1 | ADS_SEARCH_PROPERTY ==1, AGE_GROUP == 5) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, AGE_GROUP == 5) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
   summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
@@ -273,7 +313,7 @@ ripa %>%
 ## hit rates,by race and agency, 35 - 44
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1| ADS_SEARCH_PROPERTY ==1, AGE_GROUP == 6) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, AGE_GROUP == 6) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
   summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
@@ -283,7 +323,7 @@ ripa %>%
 ## hit rates, by race and agency, 45 and above
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1 | ADS_SEARCH_PROPERTY ==1, AGE_GROUP >= 7) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, AGE_GROUP >= 7) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
   summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
@@ -303,9 +343,9 @@ ripa %>%
 ```{r}
 ripa %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON, 
+  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY), 
                                     na.rm = TRUE)/n(), 
-            n_tot_consent = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON == 1, 
+            n_tot_consent = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON| ADS_SEARCH_PROPERTY), 
                                 na.rm = TRUE)) %>% 
   print(n = 64)
 ```
@@ -315,9 +355,9 @@ ripa %>%
 ripa %>% 
   filter(AGE_GROUP == 4) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON, 
+  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY), 
                                     na.rm = TRUE)/n(), 
-            n_tot_consent = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON == 1, 
+            n_tot_consent = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON| ADS_SEARCH_PROPERTY), 
                                 na.rm = TRUE)) %>% 
   print(n = 64)
 ```
@@ -328,9 +368,9 @@ ripa %>%
 ripa %>% 
   filter(AGE_GROUP == 5) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON, 
+  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY), 
                                     na.rm = TRUE)/n(), 
-            n_tot_consent = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON == 1, 
+            n_tot_consent = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON| ADS_SEARCH_PROPERTY), 
                                 na.rm = TRUE)) %>% 
   print(n = 64)
 ```
@@ -340,9 +380,9 @@ ripa %>%
 ripa %>% 
   filter(AGE_GROUP == 6) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON, 
+  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY), 
                                     na.rm = TRUE)/n(), 
-            n_tot_consent = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON == 1, 
+            n_tot_consent = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON| ADS_SEARCH_PROPERTY), 
                                 na.rm = TRUE)) %>% 
   print(n = 64)
 ```
@@ -352,9 +392,9 @@ ripa %>%
 ripa %>% 
   filter(AGE_GROUP >= 7) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON, 
+  summarize(consent_srch_rate = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY), 
                                     na.rm = TRUE)/n(), 
-            n_tot_consent = sum(BFS_CONSENT_GIVEN == 1 & ADS_SEARCH_PERSON == 1, 
+            n_tot_consent = sum(BFS_CONSENT_GIVEN & (ADS_SEARCH_PERSON| ADS_SEARCH_PROPERTY), 
                                 na.rm = TRUE)) %>% 
   print(n = 64)
 ```
@@ -363,12 +403,9 @@ ripa %>%
 # CONSET SEARCH HIT RATES
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1, BFS_CONSENT_GIVEN == 1) %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, BFS_CONSENT_GIVEN == 1) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(hit_rate = sum(CED_FIREARM == 1 | CED_AMMUNITION == 1 | CED_WEAPON == 1  | 
-                             CED_DRUGS == 1  | CED_ALCOHOL == 1  | CED_MONEY == 1  | 
-                             CED_DRUG_PARAPHERNALIA == 1  | CED_STOLEN_PROP == 1  | 
-                             CED_ELECT_DEVICE == 1  | CED_OTHER_CONTRABAND == 1 )/n()) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
 
 ```
@@ -377,13 +414,10 @@ ripa %>%
 ## consent searches hit rates, 18 - 24
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1, BFS_CONSENT_GIVEN == 1, 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, BFS_CONSENT_GIVEN == 1, 
          AGE_GROUP == 4) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(hit_rate = sum(CED_FIREARM == 1 | CED_AMMUNITION == 1 | CED_WEAPON == 1  | 
-                             CED_DRUGS == 1  | CED_ALCOHOL == 1  | CED_MONEY == 1  | 
-                             CED_DRUG_PARAPHERNALIA == 1  | CED_STOLEN_PROP == 1  | 
-                             CED_ELECT_DEVICE == 1  | CED_OTHER_CONTRABAND == 1 )/n()) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
 
 ```
@@ -391,13 +425,10 @@ ripa %>%
 ## consent searches hit rates, 25 - 34
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1, BFS_CONSENT_GIVEN == 1, 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, BFS_CONSENT_GIVEN == 1,  
          AGE_GROUP == 5) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(hit_rate = sum(CED_FIREARM == 1 | CED_AMMUNITION == 1 | CED_WEAPON == 1  | 
-                             CED_DRUGS == 1  | CED_ALCOHOL == 1  | CED_MONEY == 1  | 
-                             CED_DRUG_PARAPHERNALIA == 1  | CED_STOLEN_PROP == 1  | 
-                             CED_ELECT_DEVICE == 1  | CED_OTHER_CONTRABAND == 1 )/n()) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
 
 ```
@@ -405,13 +436,10 @@ ripa %>%
 ## consent searches hit rates, 35 - 44
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1, BFS_CONSENT_GIVEN == 1, 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, BFS_CONSENT_GIVEN == 1, 
          AGE_GROUP == 6) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(hit_rate = sum(CED_FIREARM == 1 | CED_AMMUNITION == 1 | CED_WEAPON == 1  | 
-                             CED_DRUGS == 1  | CED_ALCOHOL == 1  | CED_MONEY == 1  | 
-                             CED_DRUG_PARAPHERNALIA == 1  | CED_STOLEN_PROP == 1  | 
-                             CED_ELECT_DEVICE == 1  | CED_OTHER_CONTRABAND == 1 )/n()) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
 
 ```
@@ -419,13 +447,10 @@ ripa %>%
 ## consent searches hit rates, 45 and above
 ```{r}
 ripa %>% 
-  filter(ADS_SEARCH_PERSON == 1, BFS_CONSENT_GIVEN == 1, 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, BFS_CONSENT_GIVEN == 1,
          AGE_GROUP >= 7) %>% 
   group_by(AGENCY_ORI_2, RAE5) %>% 
-  summarize(hit_rate = sum(CED_FIREARM == 1 | CED_AMMUNITION == 1 | CED_WEAPON == 1  | 
-                             CED_DRUGS == 1  | CED_ALCOHOL == 1  | CED_MONEY == 1  | 
-                             CED_DRUG_PARAPHERNALIA == 1  | CED_STOLEN_PROP == 1  | 
-                             CED_ELECT_DEVICE == 1  | CED_OTHER_CONTRABAND == 1 )/n()) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
   print(n = 64)
 
 ```
