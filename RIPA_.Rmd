@@ -73,6 +73,22 @@ ripa %>% count(RAE5)
 ```
 
 
+
+## AGE5
+```{r}
+ripa %>% 
+  mutate(AGE4 = case_when(
+    AGE_GROUP >= 1 & AGE_GROUP <= 4 ~ 4,
+    AGE_GROUP == 5 ~ 5,
+    AGE_GROUP == 6 ~ 6,
+    AGE_GROUP >= 7 & AGE_GROUP <= 9 ~ 7
+  )) -> ripa
+
+ripa %>% count(AGE_GROUP)
+ripa %>% count(AGE4)
+```
+
+
 ### Number of Stops by Agency
 ```{r}
 ripa %>% 
@@ -149,6 +165,132 @@ ripa %>%
 ```
 
 
+## Overall Search Rates and Hit Rates by Reason for Stop, Race, 18 - 24
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP == 4) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)/n(), 
+            n_search = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)) 
+
+
+ripa %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+         REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP == 4) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n())
+```
+
+
+## Overall Search Rates and Hit Rates by Reason for Stop, Race, 25 - 34
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP == 5) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)/n(), 
+            n_search = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)) 
+
+
+ripa %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+         REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP == 5) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n())
+```
+
+
+## Overall Search Rates and Hit Rates by Reason for Stop, Race, 35 - 44
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP == 6) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)/n(), 
+            n_search = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)) 
+
+
+ripa %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+         REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP == 6) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n())
+```
+
+
+## Overall Search Rates and Hit Rates by Reason for Stop, Race, 45 and above
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP >= 7) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)/n(), 
+            n_search = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, na.rm = TRUE)) 
+
+
+ripa %>% 
+  filter(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+         REASON_FOR_STOP == 1 | REASON_FOR_STOP == 2, 
+         AGENCY_ORI_2 != 4, AGE_GROUP >= 7) %>% 
+  group_by(REASON_FOR_STOP, RAE5) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n())
+```
+
+
+### Traffic violation search rate plot
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1, 
+         AGENCY_ORI_2 != 4, 
+         RAE5 == 2 | RAE5 == 3 | RAE5 == 7) %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+                              na.rm = TRUE)/n()) %>% 
+  ggplot(mapping = aes(x = AGE4, y = search_rate, color = as.factor(RAE5))) +
+  geom_line() +
+  labs(title = "Minority Drivers are More Likely to be Searched during Traffic Stops",
+       x = "age group", y = "search rate", color = "Race/Ethnicity") +
+  geom_text(aes(label = scales::percent(round(search_rate, digits=2), 1), 
+                vjust = -0.3), size = 3.5) +
+  scale_color_discrete(labels = c("African American", "Hispanic", "White")) +
+  scale_x_continuous(label = c("24 and younger", "25 to 34", 
+                               "35 to 44", "45 and older")) +
+  scale_y_continuous(labels = scales::percent, 
+                     limits = c(0, 0.3),
+                     breaks = seq(0, 0.3, by = 0.1))
+```
+
+
+### Traffic violation hit rate plot
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1, 
+         AGENCY_ORI_2 != 4, 
+         ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+         RAE5 == 2 | RAE5 == 3 | RAE5 == 7) %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0)/n()) %>% 
+  ggplot(mapping = aes(x = AGE4, y = hit_rate, color = as.factor(RAE5))) +
+  geom_line() +
+  labs(title = "Minority Drivers Stopped for Traffic Violations Have Lower Hit Rates",
+       x = "age group", y = "hit rate", color = "Race/Ethnicity") +
+  geom_text(aes(label = scales::percent(round(hit_rate, digits=2), 1), 
+                vjust = -0.3), size = 3.5) +  
+  scale_color_discrete(labels = c("African American", "Hispanic", "White")) +
+    scale_x_continuous(label = c("24 and younger", "25 to 34", 
+                               "35 to 44", "45 and older")) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.3),
+                     breaks = seq(0, 0.3, by = 0.1))
+```
+
+
+
+
 ## Overall Hit Rates by Reason for Stop and Race
 ```{r}
 ripa %>% 
@@ -160,6 +302,9 @@ ripa %>%
 
 
 ```
+
+
+
 
 
 
