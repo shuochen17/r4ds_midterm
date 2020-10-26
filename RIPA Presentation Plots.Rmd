@@ -1,0 +1,118 @@
+---
+title: "RIPA Presentation Plots"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(tidyverse)
+library(dplyr)
+library(readr)
+```
+
+##import RIPA dataset
+```{r}
+ripa <- RIPA_Stop_Data_2018
+```
+##generate 5 race/ethnic groups (factored)
+```{r}
+ripa %>% 
+  mutate(RAE5 = case_when(
+    RAE_FULL == 1 ~ "Asian", 
+    RAE_FULL == 2 ~ "Black",
+    RAE_FULL == 3 ~"Hispanic",
+    RAE_FULL == 7 ~ "White",
+    RAE_FULL == 4 | RAE_FULL == 5 | RAE_FULL == 6 | RAE_FULL == 8 ~ "Other"
+  )) ->ripa
+```
+##establish for age groups (factored)
+```{r}
+ripa %>% 
+  mutate(AGE4 = case_when(
+    AGE_GROUP >= 1 & AGE_GROUP <= 4 ~ 4,
+    AGE_GROUP == 5 ~ 5,
+    AGE_GROUP == 6 ~ 6,
+    AGE_GROUP >= 7 & AGE_GROUP <= 9 ~ 7
+  )) -> ripa
+ripa %>% count(AGE_GROUP)
+ripa %>% count(AGE4)
+```
+##population pyramid: # of stops by Race and Gender
+```{r}
+ripa %>%
+  filter(G_MALE == 1 | G_FEMALE == 1)%>%
+  group_by(RAE5,G_MALE)%>%
+ggplot(mapping=aes(x = fct_infreq(as.factor(RAE5)), fill = as.factor(G_MALE))) + 
+  geom_bar(data=subset(ripa, G_MALE==1)) + 
+  geom_bar(data=subset(ripa,G_MALE==0),aes( y=..count..*(-1))) + scale_y_continuous(breaks = seq(-200000, 550000, 50000), labels=abs(seq(-200, 550, 50))) +  coord_flip() +
+  # Flip axes
+  labs(title="Number of Stops by Race and Gender", y="number of stops (in thousands)", x="race & ethnicity", fill="Gender") + 
+  theme(plot.title = element_text(hjust = .5), axis.title=element_blank(),
+ axis.ticks = element_blank(), legend.title=element_blank()) + theme_bw() +  scale_fill_manual(values=c("#E69F00","#56B4E9"),labels = c("Women", "Men"))
+```
+##bar chart: distribution of agency stops:
+```{r}
+ripa %>%
+  group_by(AGENCY_ORI_2)%>%
+  ggplot(aes(x=as.factor(AGENCY_ORI_2), y=..prop.., group=1)) + geom_histogram(stat = "count", fct_relevel=(c("3","4","6","5","7","8","1","2")))+theme_minimal()+labs() + theme(axis.line = element_line(colour = "white"),axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(), axis.title.x=element_blank(),axis.title.y=element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),legend.position = "none") + scale_x_discrete(guide = guide_axis(n.dodge = 2), labels=c("1"="LA Sheriff","2"="LAPD", "3"="Riverside Sheriff", "4"= "CHP","5"="San Bern. Sheriff", "6"="SD Sheriff", "7"= "SDPD","8"="SFPD"))+geom_text(aes(label=scales::percent(round(..prop..,2)), y=..prop..), stat="count", vjust=-.5, size=3)
+```
+
+##bar chart:stop rates by reason for stop and race/ethnicity groups
+```{r}
+ripa %>% 
+  group_by(RAE5,REASON_FOR_STOP) %>% 
+  mutate(REASON_FOR_STOP = case_when(
+    REASON_FOR_STOP == 1 ~ "Traffic Violation", 
+    REASON_FOR_STOP == 2 ~ "Reasonable Suspicion",
+    REASON_FOR_STOP >= 3 ~"Other")) %>%
+  mutate(prop_stop=sum(REASON_FOR_STOP==2,na.rm = TRUE)/n())%>% 
+  mutate(RAE5=fct_relevel(RAE5,"Black", "Hispanic", "White", "Other","Asian"))%>% 
+ggplot(mapping=aes(x=RAE5, fill=REASON_FOR_STOP)) + 
+    geom_bar(position="fill")+ theme_minimal() + theme(axis.line = element_line(colour = "black"),axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(), axis.title.x=element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + scale_fill_manual(values=c("#56B4E9", "#009E73", "#0072B2")) + labs(y = "Stop Rate", fill="Reason For Stop", label="white") + scale_y_continuous(labels = scales::percent)+
+```
+
+##box plot: use of force rates by race/ethnicity group 
+```{r}
+ripa %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(force_rate= sum(use_of_force, na.rm = TRUE)/n()) %>% 
+  ggplot(aes(x = reorder(as.factor(RAE5), -force_rate), y = force_rate, fill = as.factor(RAE5))) +
+  geom_boxplot() +
+  labs(title = "Officers More Likely to Use Force on Black Individuals",
+  x=" ", y = "use of force rate", color = "Race/Ethnicity") +scale_color_discrete(labels = c("Asian", "Black", "Hispanic", "White", "Other")) +scale_fill_discrete(name=NULL) + theme(legend.title = element_blank()) + theme_minimal()+ 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.02),
+                     breaks = seq(0, 0.02, by = 0.005))
+```
+
+##line graph/facet wrap: search rates by race/ethnicity and age groups
+
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1) %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+                              na.rm = TRUE)/n()) %>% mutate(RAE5=fct_relevel(RAE5,"Black", "Hispanic", "White", "Other","Asian"))%>% 
+  ggplot(mapping = aes(x = AGE4, y = search_rate, color = as.factor(RAE5))) +
+  geom_line() +
+  labs(title = "Black and Hispanic Drivers More Likely to be Searched during Traffic Stops",
+       x = "age group", y = "search rate", color = "Race/Ethnicity") +
+  geom_text(aes(label = scales::percent(round(search_rate, digits=2), 1), 
+                vjust = -0.3), size = 2.0) +
+  scale_x_continuous(label = c("<24", "25-34", 
+                               "35-44", ">45")) +facet_wrap(~RAE5)+
+  scale_y_continuous(labels = scales::percent, 
+                     limits = c(0, 0.3),
+                     breaks = seq(0, 0.3, by = 0.1)) + theme_minimal()
+```
