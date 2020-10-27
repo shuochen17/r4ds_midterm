@@ -1,5 +1,6 @@
 ---
 title: "RIPA Presentation Plots"
+by: Shuo Chen, Daniel Morales Campos, & Izzy Clayter
 output:
   html_document:
     df_print: paged
