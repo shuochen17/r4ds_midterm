@@ -1,6 +1,8 @@
 ---
 title: "RIPA Presentation Plots"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 ```{r}
 library(tidyverse)
@@ -9,11 +11,11 @@ library(scales)
 library(tidyverse)
 library(dplyr)
 library(readr)
+library(lubridate)
 ```
-
 ##import RIPA dataset
 ```{r}
-ripa <- RIPA_Stop_Data_2018
+ripa <- read_csv("RIPA Stop Data 2018.csv")
 ```
 ##generate 5 race/ethnic groups (factored)
 ```{r}
@@ -64,6 +66,7 @@ ripa %>%
 ```
 
 ##bar chart:stop rates by reason for stop and race/ethnicity groups
+
 ```{r}
 ripa %>% 
   group_by(RAE5,REASON_FOR_STOP) %>% 
@@ -72,20 +75,40 @@ ripa %>%
     REASON_FOR_STOP == 2 ~ "Reasonable Suspicion",
     REASON_FOR_STOP >= 3 ~"Other")) %>%
   mutate(prop_stop=sum(REASON_FOR_STOP==2,na.rm = TRUE)/n())%>% 
-  mutate(RAE5=fct_relevel(RAE5,"Black", "Hispanic", "White", "Other","Asian"))%>% 
+  mutate(RAE5=fct_relevel(RAE5,"Black", "Hispanic", "White", "Other","Asian"))%>%
 ggplot(mapping=aes(x=RAE5, fill=REASON_FOR_STOP)) + 
     geom_bar(position="fill")+ theme_minimal() + theme(axis.line = element_line(colour = "black"),axis.text.y=element_blank(),
         axis.ticks.y=element_blank(), axis.title.x=element_blank(),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.border = element_blank(),
-    panel.background = element_blank()) + scale_fill_manual(values=c("#56B4E9", "#009E73", "#0072B2")) + labs(y = "Stop Rate", fill="Reason For Stop", label="white") + scale_y_continuous(labels = scales::percent)+
+    panel.background = element_blank()) + scale_fill_manual(values=c("#56B4E9", "#009E73", "#0072B2")) + labs(y = "Stop Rate", fill="Reason For Stop", label="white") + scale_y_continuous(labels = scales::percent)
 ```
-
+##create use of force variable
+```{r}
+ripa %>% 
+  mutate(use_of_force = case_when(ADS_FIREARM_POINT == 1 
+                            | ADS_FIREARM_DISCHARGE== 1
+                            | ADS_ELECT_DEVICE== 1
+                            | ADS_IMPACT_DISCHARGE ==1 
+                            | ADS_CANINE_BITE == 1 
+                            | ADS_BATON == 1 
+                            | ADS_CHEM_SPRAY == 1
+                            | ADS_OTHER_CONTACT == 1 ~ 1, 
+  ADS_FIREARM_POINT == 0 
+  & ADS_FIREARM_DISCHARGE== 0
+  & ADS_ELECT_DEVICE== 0 
+  & ADS_IMPACT_DISCHARGE ==0 
+  & ADS_CANINE_BITE == 0 
+  & ADS_BATON == 0
+  & ADS_CHEM_SPRAY == 0
+  & ADS_OTHER_CONTACT== 0 ~ 0 )) -> ripa
+```
 ##box plot: use of force rates by race/ethnicity group 
 ```{r}
 ripa %>% 
-  group_by(RAE5, AGE4) %>% 
+  group_by(RAE5,AGE4) %>% 
+  
   summarize(force_rate= sum(use_of_force, na.rm = TRUE)/n()) %>% 
   ggplot(aes(x = reorder(as.factor(RAE5), -force_rate), y = force_rate, fill = as.factor(RAE5))) +
   geom_boxplot() +
@@ -116,3 +139,98 @@ ripa %>%
                      limits = c(0, 0.3),
                      breaks = seq(0, 0.3, by = 0.1)) + theme_minimal()
 ```
+
+
+### Overall search rate plot
+```{r}
+ripa %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+                              na.rm = TRUE)/n()) %>% 
+  ggplot(mapping = aes(x = AGE4, y = search_rate, color = as.factor(RAE5))) +
+  geom_line() +
+  theme_classic() +
+  labs(title = "Overall Search Rates",
+       x = "age group", y = "search rate", color = "Race/Ethnicity") +
+  geom_text(aes(label = scales::percent(round(search_rate, digits=2), 1), 
+                vjust = -0.3), size = 3) +
+  scale_color_discrete(labels = c("Asian", "Black", "Hispanic", 
+                                  "White", "Other")) +
+  scale_x_continuous(label = c("24 and younger", "25 to 34", 
+                               "35 to 44", "45 and older")) +
+  scale_y_continuous(labels = scales::percent, 
+                     limits = c(0, 0.3),
+                     breaks = seq(0, 0.3, by = 0.05))
+```
+
+
+
+### Traffic violation stop hit rate plot
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 1,
+         ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY) %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0, na.rm = TRUE)/n()) %>% 
+  ggplot(mapping = aes(x = AGE4, y = hit_rate, color = as.factor(RAE5))) +
+  geom_line() +
+  theme_classic() +
+  labs(title = "Traffic Violations Stop Hit Rates",
+       x = "age group", y = "hit rate", color = "Race/Ethnicity") +
+  geom_text(aes(label = scales::percent(round(hit_rate, digits=2), 1), 
+                vjust = -0.3), size = 3) +  
+  scale_color_discrete(labels = c("Asian", "Black", "Hispanic", 
+                                  "White", "Other")) +
+    scale_x_continuous(label = c("24 and younger", "25 to 34", 
+                               "35 to 44", "45 and older")) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.3),
+                     breaks = seq(0, 0.3, by = 0.1))
+```
+
+
+### Reasonable suspicion stop search rate plot
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 2) %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(search_rate = sum(ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY, 
+                              na.rm = TRUE)/n()) %>% 
+  ggplot(mapping = aes(x = AGE4, y = search_rate, color = as.factor(RAE5))) +
+  geom_line() +
+  theme_classic() +
+  labs(title = "Reasonable Suspicion Stop Search Rates",
+       x = "age group", y = "search rate", color = "Race/Ethnicity") +
+  geom_text(aes(label = scales::percent(round(search_rate, digits=2), 1), 
+                vjust = -0.3), size = 3) +
+  scale_color_discrete(labels = c("Asian", "Black", "Hispanic", 
+                                  "White", "Other")) +
+  scale_x_continuous(label = c("24 and younger", "25 to 34", 
+                               "35 to 44", "45 and older")) +
+  scale_y_continuous(labels = scales::percent, 
+                     limits = c(0, 0.6),
+                     breaks = seq(0, 0.6, by = 0.1))
+```
+
+
+### Reasonable suspicion stop hit rate plot
+```{r}
+ripa %>% 
+  filter(REASON_FOR_STOP == 2, 
+         ADS_SEARCH_PERSON | ADS_SEARCH_PROPERTY) %>% 
+  group_by(RAE5, AGE4) %>% 
+  summarize(hit_rate = sum(CED_NONE_CONTRABAND==0, na.rm = TRUE)/n()) %>% 
+  ggplot(mapping = aes(x = AGE4, y = hit_rate, color = as.factor(RAE5))) +
+  geom_line() +
+  theme_classic() +
+  labs(title = "Reasonable Suspicion Stop Hit Rates",
+       x = "age group", y = "hit rate", color = "Race/Ethnicity") +
+  geom_text(aes(label = scales::percent(round(hit_rate, digits=2), 1), 
+                vjust = -0.3), size = 3) +  
+  scale_color_discrete(labels = c("Asian", "Black", "Hispanic", 
+                                  "White", "Other")) +
+    scale_x_continuous(label = c("24 and younger", "25 to 34", 
+                               "35 to 44", "45 and older")) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.4),
+                     breaks = seq(0, 0.4, by = 0.1))
